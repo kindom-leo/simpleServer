@@ -11,10 +11,32 @@
 #define SERVER_PORT 60000
 #define CONNECT_NUMS 5
 
+enum CMD {
+	CMD_LOGIN,
+	CMD_LOGOUT,
+	CMD_ERROR
+};
 
-struct DataPackage {
-	int		m_age;
-	char	m_chArrName[32];
+struct DataHeader {
+	unsigned short dataLen;
+	unsigned short cmd;
+};
+
+struct Login {
+	char 	m_username[32];
+	char	m_password[32];
+};
+
+struct LoginResult {
+	int result;
+};
+
+struct Logout {
+	char username[32];
+};
+
+struct LogoutResult {
+	int result;
 };
 int main() {
 	WORD ver = MAKEWORD(2, 1);
@@ -53,23 +75,39 @@ int main() {
 		return -1;
 	}
 	fprintf(stdout, "new client comming :Ip = %s\n", inet_ntoa(sa_client.sin_addr));
-	char cmdMsg[128];
+	
 	while(true){
-		memset(cmdMsg, 0, sizeof(cmdMsg));
-		int nlen = recv(sock_client, cmdMsg, sizeof(cmdMsg), 0);
+		DataHeader dh{};
+		int nlen = recv(sock_client, (char*)&dh, sizeof(DataHeader), 0);
 		if (nlen <= 0) {
 			fprintf(stdout, "client has quit , mission complete!");
 			break;
 		}
-		std::for_each(std::begin(cmdMsg), std::end(cmdMsg), [](char& c) { c = std::tolower(c); });
-		if (0 == strcmp(cmdMsg, "getinfo")) {
-			DataPackage dp{ 38,"kindom-leo" };
-			send(sock_client, (const char*)&dp, sizeof(DataPackage), 0);
-		}  else {
-			char msgBuf[] = "hello , i am server! what you wanna do?";
-			send(sock_client, msgBuf, strlen(msgBuf) + 1, 0);
+		printf("recv cmd :%d ,data length : %d\n", dh.cmd, dh.dataLen);
+		switch (dh.cmd) {
+		case CMD_LOGIN:
+		{
+			Login login{};
+			LoginResult logres{ 0 };
+			recv(sock_client, (char*)&login, sizeof(Login), 0);
+			send(sock_client, (const char*)&dh, sizeof(DataHeader), 0);
+			send(sock_client, (const char*)&logres, sizeof(LoginResult), 0);
 		}
-		
+			break;
+		case CMD_LOGOUT:
+		{
+			Logout logout{};
+			LogoutResult logoutres{ 1 };
+			recv(sock_client, (char*)&logout, sizeof(Logout), 0);
+			send(sock_client, (const char*)&dh, sizeof(DataHeader), 0);
+			send(sock_client, (const char*)&logoutres, sizeof(LogoutResult), 0);
+		}
+			break;
+		default:
+			DataHeader dh{ CMD_ERROR,0 };
+			send(sock_client, (const char*)&dh, sizeof(DataHeader), 0);
+			break;
+		}		
 	}
 	
 

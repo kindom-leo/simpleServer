@@ -14,11 +14,33 @@ using std::cin;
 
 #define SERVER_PORT 60000
 
-struct DataPackage {
-	int		m_age;
-	char	m_chArrName[32];
+enum CMD {
+	CMD_LOGIN,
+	CMD_LOGOUT,
+	CMD_ERROR
 };
 
+struct DataHeader {
+	unsigned short dataLen;
+	unsigned short cmd;
+};
+
+struct Login {
+	char 	m_username[32];
+	char	m_password[32];
+};
+
+struct LoginResult {
+	int result;
+};
+
+struct Logout {
+	char username[32];
+};
+
+struct LogoutResult {
+	int result;
+};
 
 int main() {
 	WORD ver = MAKEWORD(2, 2);
@@ -43,22 +65,42 @@ int main() {
 	int len = sizeof(sockaddr_in);
 	while (true) {
 		s.clear();
+		//输入请求命令
 		cout << "pleas input:" << endl;
 		std::getline(cin, s);
+		std::for_each(begin(s), end(s), [](auto& c) {c = std::tolower(c); });
+		//处理请求命令
 		if (s == "exit") {
+			printf("receive command EXIT! mission complete!\n");
 			break;
-		}else{
-			send(_sock, s.c_str(), s.size(), 0);
+		} else if (s == "login") {
+			//向服务器发送请求
+			Login login{ "leopardln","ljt111104" };
+			DataHeader dh{ sizeof(login),CMD_LOGIN };
+			send(_sock, (const char*)&dh, sizeof(DataHeader), 0);
+			send(_sock, (const char*)&login, sizeof(Login), 0);
+			//接收服务器返回的数据
+			DataHeader dhres{};
+			LoginResult loginRes{};
+			recv(_sock, (char*)&dhres, sizeof(DataHeader), 0);
+			recv(_sock, (char*)&loginRes, sizeof(loginRes), 0);
+			printf("login result: %d\n", loginRes.result);
+		} else if (s == "logout") {
+			//向服务器发送退出请求
+			Logout logout{"leopardln"};
+			DataHeader dh{sizeof(Logout),CMD_LOGOUT};
+			send(_sock, (const char*)&dh, sizeof(DataHeader), 0);
+			send(_sock, (const char*)&logout, sizeof(Login), 0);
+			//接收服务器返回的数据
+			DataHeader dhres{};
+			LogoutResult logoutRes{};
+			recv(_sock, (char*)&dhres, sizeof(DataHeader), 0);
+			recv(_sock, (char*)&logoutRes, sizeof(LogoutResult), 0);
+			printf("login result: %d\n", logoutRes.result);
 		}
-		char szBuf[256] = { 0 };
-		int nLen = recv(_sock, szBuf, 256, 0);
-		DataPackage* dp = reinterpret_cast<DataPackage*>(szBuf);
-		if (nLen > 0) {
-			std::for_each(begin(s), end(s), [](auto& c) {return c = std::tolower(c); });
-			if (s == "getinfo")
-				cout << "recv msg from server: name = " << dp->m_chArrName << ",age = " << dp->m_age << endl;
-			else
-				cout << "recv msg from server :" << szBuf << endl;
+		else{
+			printf("receive invalid command ! mission complete!\n");
+			break;
 		}
 	}
 
