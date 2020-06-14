@@ -5,12 +5,21 @@
 #include <cstring>
 #include <iostream>
 #include <string>
+#include <algorithm>
 using std::cout;
 using std::endl;
 using std::cin;
+
 #pragma comment(lib,"ws2_32.lib")
 
 #define SERVER_PORT 60000
+
+struct DataPackage {
+	int		m_age;
+	char	m_chArrName[32];
+};
+
+
 int main() {
 	WORD ver = MAKEWORD(2, 2);
 	WSADATA data;
@@ -43,8 +52,13 @@ int main() {
 		}
 		char szBuf[256] = { 0 };
 		int nLen = recv(_sock, szBuf, 256, 0);
+		DataPackage* dp = reinterpret_cast<DataPackage*>(szBuf);
 		if (nLen > 0) {
-			cout << "recv msg from server:" << szBuf << endl;
+			std::for_each(begin(s), end(s), [](auto& c) {return c = std::tolower(c); });
+			if (s == "getinfo")
+				cout << "recv msg from server: name = " << dp->m_chArrName << ",age = " << dp->m_age << endl;
+			else
+				cout << "recv msg from server :" << szBuf << endl;
 		}
 	}
 

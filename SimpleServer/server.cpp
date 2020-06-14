@@ -2,12 +2,20 @@
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #include <Windows.h>
 #include <WinSock2.h>
-#include <stdio.h>
+#include <iostream>
 #include <string.h>
+#include <string>
+#include <algorithm>
 #pragma comment(lib,"ws2_32.lib")
 
 #define SERVER_PORT 60000
 #define CONNECT_NUMS 5
+
+
+struct DataPackage {
+	int		m_age;
+	char	m_chArrName[32];
+};
 int main() {
 	WORD ver = MAKEWORD(2, 1);
 	WSADATA data;
@@ -53,13 +61,11 @@ int main() {
 			fprintf(stdout, "client has quit , mission complete!");
 			break;
 		}
-		if (0 == strcmp(cmdMsg, "GetName")) {
-			char szName[] = "leopardln";
-			send(sock_client, szName, sizeof(szName), 0);
-		} else if (0 == strcmp(cmdMsg, "GetAge")) {
-			char szAge[] = "36";
-			send(sock_client, szAge, sizeof(szAge), 0);
-		} else {
+		std::for_each(std::begin(cmdMsg), std::end(cmdMsg), [](char& c) { c = std::tolower(c); });
+		if (0 == strcmp(cmdMsg, "getinfo")) {
+			DataPackage dp{ 38,"kindom-leo" };
+			send(sock_client, (const char*)&dp, sizeof(DataPackage), 0);
+		}  else {
 			char msgBuf[] = "hello , i am server! what you wanna do?";
 			send(sock_client, msgBuf, strlen(msgBuf) + 1, 0);
 		}
