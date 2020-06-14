@@ -13,7 +13,9 @@
 
 enum CMD {
 	CMD_LOGIN,
+	CMD_LOGIN_RESULT,
 	CMD_LOGOUT,
+	CMD_LOGOUT_RESULT,
 	CMD_ERROR
 };
 
@@ -22,20 +24,38 @@ struct DataHeader {
 	unsigned short cmd;
 };
 
-struct Login {
-	char 	m_username[32];
-	char	m_password[32];
+struct Login :DataHeader {
+	Login() {
+		dataLen = sizeof(Login);
+		cmd = CMD_LOGIN;
+	}
+	char 	m_username[32] = {};
+	char	m_password[32] = {};
 };
 
-struct LoginResult {
+struct LoginResult :DataHeader{
+	LoginResult() {
+		dataLen = sizeof(LoginResult);
+		cmd = CMD_LOGIN_RESULT;
+		result = 0;
+	}
 	int result;
 };
 
-struct Logout {
-	char username[32];
+struct Logout :DataHeader{
+	Logout() {
+		dataLen = sizeof(Logout);
+		cmd = CMD_LOGOUT;
+	}
+	char username[32] = {};
 };
 
-struct LogoutResult {
+struct LogoutResult :DataHeader{
+	LogoutResult() {
+		dataLen = sizeof(LogoutResult);
+		cmd = CMD_LOGOUT_RESULT;
+		result = 0;
+	}
 	int result;
 };
 int main() {
@@ -83,23 +103,25 @@ int main() {
 			fprintf(stdout, "client has quit , mission complete!");
 			break;
 		}
-		printf("recv cmd :%d ,data length : %d\n", dh.cmd, dh.dataLen);
+		
 		switch (dh.cmd) {
 		case CMD_LOGIN:
 		{
 			Login login{};
-			LoginResult logres{ 0 };
-			recv(sock_client, (char*)&login, sizeof(Login), 0);
-			send(sock_client, (const char*)&dh, sizeof(DataHeader), 0);
+			LoginResult logres{ };
+			recv(sock_client, (char*)&login + sizeof(DataHeader), sizeof(Login) - sizeof(DataHeader), 0);
+			printf("recv cmd :CMD_LOGIN ,data length : %d  username: %s  password: %s\n", 
+				login.dataLen,login.m_username,login.m_password);
 			send(sock_client, (const char*)&logres, sizeof(LoginResult), 0);
 		}
 			break;
 		case CMD_LOGOUT:
 		{
 			Logout logout{};
-			LogoutResult logoutres{ 1 };
-			recv(sock_client, (char*)&logout, sizeof(Logout), 0);
-			send(sock_client, (const char*)&dh, sizeof(DataHeader), 0);
+			LogoutResult logoutres;
+			recv(sock_client, (char*)&logout + sizeof(DataHeader), sizeof(Logout) - sizeof(DataHeader), 0);
+			printf("recv cmd :CMD_LOGOUT ,data length : %d  username: %s\n",
+				logout.dataLen, logout.username);
 			send(sock_client, (const char*)&logoutres, sizeof(LogoutResult), 0);
 		}
 			break;

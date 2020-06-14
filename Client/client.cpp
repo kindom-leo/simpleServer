@@ -1,5 +1,6 @@
 #define WIN32_LEAN_AND_MEAN   //防止windows 中winsock1 与WinSock2.h 中宏定义冲突
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS
 #include <Windows.h>
 #include <WinSock2.h>
 #include <cstring>
@@ -16,7 +17,9 @@ using std::cin;
 
 enum CMD {
 	CMD_LOGIN,
+	CMD_LOGIN_RESULT,
 	CMD_LOGOUT,
+	CMD_LOGOUT_RESULT,
 	CMD_ERROR
 };
 
@@ -25,20 +28,38 @@ struct DataHeader {
 	unsigned short cmd;
 };
 
-struct Login {
-	char 	m_username[32];
-	char	m_password[32];
+struct Login :DataHeader {
+	Login() {
+		dataLen = sizeof(Login);
+		cmd = CMD_LOGIN;
+	}
+	char 	m_username[32] = {};
+	char	m_password[32] = {};
 };
 
-struct LoginResult {
+struct LoginResult :DataHeader {
+	LoginResult() {
+		dataLen = sizeof(LoginResult);
+		cmd = CMD_LOGIN_RESULT;
+		result = 0;
+	}
 	int result;
 };
 
-struct Logout {
-	char username[32];
+struct Logout :DataHeader {
+	Logout() {
+		dataLen = sizeof(Logout);
+		cmd = CMD_LOGOUT;
+	}
+	char username[32] = {};
 };
 
-struct LogoutResult {
+struct LogoutResult :DataHeader {
+	LogoutResult() {
+		dataLen = sizeof(LogoutResult);
+		cmd = CMD_LOGOUT_RESULT;
+		result = 0;
+	}
 	int result;
 };
 
@@ -75,32 +96,26 @@ int main() {
 			break;
 		} else if (s == "login") {
 			//向服务器发送请求
-			Login login{ "leopardln","ljt111104" };
-			DataHeader dh{ sizeof(login),CMD_LOGIN };
-			send(_sock, (const char*)&dh, sizeof(DataHeader), 0);
+			Login login;
+			strcpy(login.m_username, "leopardln");
+			strcpy(login.m_password, "ljt111104");
 			send(_sock, (const char*)&login, sizeof(Login), 0);
 			//接收服务器返回的数据
-			DataHeader dhres{};
 			LoginResult loginRes{};
-			recv(_sock, (char*)&dhres, sizeof(DataHeader), 0);
 			recv(_sock, (char*)&loginRes, sizeof(loginRes), 0);
 			printf("login result: %d\n", loginRes.result);
 		} else if (s == "logout") {
 			//向服务器发送退出请求
-			Logout logout{"leopardln"};
-			DataHeader dh{sizeof(Logout),CMD_LOGOUT};
-			send(_sock, (const char*)&dh, sizeof(DataHeader), 0);
-			send(_sock, (const char*)&logout, sizeof(Login), 0);
+			Logout logout;
+			strcpy(logout.username, "leopardln");
+			send(_sock, (const char*)&logout, sizeof(Logout), 0);
 			//接收服务器返回的数据
-			DataHeader dhres{};
 			LogoutResult logoutRes{};
-			recv(_sock, (char*)&dhres, sizeof(DataHeader), 0);
 			recv(_sock, (char*)&logoutRes, sizeof(LogoutResult), 0);
 			printf("login result: %d\n", logoutRes.result);
 		}
 		else{
-			printf("receive invalid command ! mission complete!\n");
-			break;
+			printf("input an invalid command !\n");
 		}
 	}
 
